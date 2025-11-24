@@ -88,12 +88,10 @@
 
 <script>
 // ============================================================================
-// ⚠️ CONFIGURAÇÃO DA CHAVE API
+// CONFIGURAÇÃO
 // ============================================================================
-// Já inseri a chave que apareceu no seu primeiro exemplo:
+// NOTA: A chave API foi removida daqui. Ela agora vive no servidor (Back-end).
 
-
-// Tópicos para variar as perguntas
 const TOPICS = [
     "Atalhos de teclado", "Camadas (Layers)", "Máscaras (Masks)", 
     "Ferramenta Pen Tool", "Filtros e Smart Objects", "Modos de Mesclagem (Blend Modes)",
@@ -101,7 +99,7 @@ const TOPICS = [
     "Pincéis (Brushes)", "Ferramenta Clone Stamp", "Tipografia", "Camera Raw"
 ];
 
-// Banco de Reserva (Offline) - Caso a IA falhe ou acabe a cota
+// Banco de Reserva (Offline) - Caso a API falhe
 const LOCAL_QUESTIONS = [
     {
         pergunta: "OFFLINE: Qual atalho inverte as cores de uma camada?",
@@ -157,11 +155,7 @@ startBtn.addEventListener('click', startGame);
 stopBtn.addEventListener('click', stopGame);
 
 function startGame() {
-    // Verificação de Segurança (Agora aceita sua chave)
-    if (GEMINI_API_KEY === "SUA_CHAVE_AQUI" || GEMINI_API_KEY.length < 10) {
-        alert("⚠️ ATENÇÃO: Chave API inválida! O jogo rodará no modo Offline.");
-    }
-
+    // Limpamos a verificação de chave, pois o backend cuida disso.
     score = 0;
     questionCount = 0;
     hits = 0;
@@ -206,6 +200,7 @@ async function loadNewQuestion() {
     `;
 
     try {
+        // Chama nosso servidor (server.js) em vez do Google direto
         const data = await callGemini(topic);
         currentQuestion = parseResponse(data);
     } catch (error) {
@@ -214,7 +209,7 @@ async function loadNewQuestion() {
         const randomLocal = LOCAL_QUESTIONS[Math.floor(Math.random() * LOCAL_QUESTIONS.length)];
         currentQuestion = JSON.parse(JSON.stringify(randomLocal)); 
         
-        gameArea.innerHTML += `<div style="color:orange;text-align:center;font-size:12px;margin-bottom:10px">⚠️ Falha na conexão IA. Usando pergunta offline.</div>`;
+        gameArea.innerHTML += `<div style="color:orange;text-align:center;font-size:12px;margin-bottom:10px">⚠️ Falha no Servidor IA. Usando pergunta offline.</div>`;
     }
 
     renderQuestionUI();
@@ -281,11 +276,11 @@ function handleAnswer(selectedIndex) {
 }
 
 // ============================================================================
-// CONEXÃO API
+// CONEXÃO API (VIA SERVIDOR RENDER)
 // ============================================================================
-// Nova função que chama o SEU servidor no Render, em vez do Google direto
 async function callGemini(topic) {
-    // Note que não tem chave API aqui! É seguro.
+    // Fazemos uma requisição POST para o nosso próprio servidor
+    // O server.js vai receber isso, adicionar a chave secreta e falar com o Google
     const response = await fetch('/api/gerar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -295,7 +290,8 @@ async function callGemini(topic) {
     if (!response.ok) throw new Error('Erro no servidor');
 
     const json = await response.json();
-    return json.text; // Retorna o texto que o server mandou
+    // O servidor devolve um objeto { text: "..." }
+    return json.text;
 }
 
 function getRandomTopic() { return TOPICS[Math.floor(Math.random() * TOPICS.length)]; }
