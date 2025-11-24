@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Quiz Photoshop Infinito (IA)</title>
+<style>
+  :root{--bg:#0b1220;--card:#0f1725;--muted:#9fb0c8;--accent:#2b9cff;--success:#29c36a;--danger:#ff6b6b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,Segoe UI,Arial;background:linear-gradient(180deg,#071021 0%,#0b1220 100%);color:#e6eef6}
+  .wrap{max-width:1200px;margin:20px auto;padding:18px;display:grid;grid-template-columns:1fr 340px;gap:18px}
+  header{grid-column:1/3;display:flex;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:20px}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(2,6,23,0.6)}
+  #gameArea{padding:12px;min-height:520px;display:flex;flex-direction:column;justify-content:center}
+  .alternativas button{display:block;width:100%;text-align:left;padding:14px;margin:8px 0;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.01);color:inherit;cursor:pointer;transition:all 0.2s}
+  .alternativas button:hover{transform:translateX(4px);background:rgba(255,255,255,0.05)}
+  .alternativas button[disabled]{opacity:0.7;cursor:not-allowed;transform:none}
+  .meta{display:flex;gap:12px;align-items:center;margin-top:12px}
+  .badge{background:rgba(255,255,255,0.04);padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted)}
+  .sidebar{position:relative}
+  .sidebar .card{position:sticky;top:18px;padding:16px}
+  .score{font-size:38px;margin:6px 0;color:var(--accent)}
+  .small{font-size:13px;color:var(--muted)}
+  .btn{padding:12px 16px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:14px;width:100%}
+  .btn.primary{background:var(--accent);color:#021022}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--muted)}
+  .btn.ghost:hover{background:rgba(255,255,255,0.05)}
+  .explanation{background:rgba(43,156,255,0.05);padding:16px;border-radius:8px;margin-top:16px;color:#cbd5e1;border:1px solid rgba(43,156,255,0.1)}
+  .step{margin:8px 0;padding-left:12px;border-left:2px solid var(--accent)}
+  .correct{color:var(--success);font-weight:700}
+  .wrong{color:var(--danger);font-weight:700}
+  
+  /* Loading Spinner */
+  .loader {border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto;}
+  @keyframes spin {0% {transform: rotate(0deg);} 100% {transform: rotate(360deg);}}
+  .loading-text {text-align:center; color:var(--muted); margin-top:10px; font-size:14px; animation: pulse 1.5s infinite ease-in-out;}
+  @keyframes pulse {0%, 100% {opacity: 0.6;} 50% {opacity: 1;}}
+
+  @media (max-width:980px){.wrap{grid-template-columns:1fr;}.sidebar{order:2}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Quiz Photoshop — Gerado por IA</h1>
+      <div class="small">Perguntas infinitas criadas na hora pelo Gemini</div>
+    </div>
+  </header>
+
+  <main class="card">
+    <div id="gameArea">
+      <div style="text-align:center">
+        <h2>Bem-vindo ao Quiz Infinito</h2>
+        <p class="small" style="max-width:400px;margin:0 auto 20px auto">
+            Diferente de um quiz comum, aqui não existem perguntas prontas. 
+            A Inteligência Artificial cria uma nova pergunta sobre Photoshop 
+            exclusiva para você a cada rodada.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <aside class="sidebar">
+    <div class="card">
+      <div class="small">Jogador</div>
+      <input id="playerName" type="text" placeholder="Seu nome" value="Designer" style="width:100%;padding:10px;margin:5px 0 15px 0;border-radius:8px;border:1px solid #334155;background:#1e293b;color:white" />
+      
+      <div id="startControls">
+        <button id="startBtn" class="btn primary">Começar Desafio</button>
+      </div>
+
+      <div id="gameStats" style="display:none; margin-top:20px; border-top:1px solid #334155; padding-top:20px">
+        <div class="small">Pontuação</div>
+        <div class="score" id="scoreDisplay">0</div>
+        <div class="meta">
+          <div class="badge">Questão <span id="qCount">0</span></div>
+          <div class="badge" style="background:rgba(41,195,106,0.1);color:#29c36a">Acertos: <span id="hits">0</span></div>
+        </div>
+        <div style="margin-top:20px">
+           <button id="stopBtn" class="btn ghost">Parar / Finalizar</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ============================================================================
+// ⚠️ CONFIGURAÇÃO DA CHAVE API
+// ============================================================================
+// Já inseri a chave que apareceu no seu primeiro exemplo:
+
+
+// Tópicos para variar as perguntas
+const TOPICS = [
+    "Atalhos de teclado", "Camadas (Layers)", "Máscaras (Masks)", 
+    "Ferramenta Pen Tool", "Filtros e Smart Objects", "Modos de Mesclagem (Blend Modes)",
+    "Seleção e Recorte", "Ajustes de Cor (Curves, Levels)", "Exportação",
+    "Pincéis (Brushes)", "Ferramenta Clone Stamp", "Tipografia", "Camera Raw"
+];
+
+// Banco de Reserva (Offline) - Caso a IA falhe ou acabe a cota
+const LOCAL_QUESTIONS = [
+    {
+        pergunta: "OFFLINE: Qual atalho inverte as cores de uma camada?",
+        alternativas: ["Ctrl + I", "Ctrl + U", "Alt + I", "Shift + I"],
+        correta: 0,
+        explicacao: ["O comando Invert (Ctrl+I) troca cada cor pela sua oposta no círculo cromático."]
+    },
+    {
+        pergunta: "OFFLINE: Para que serve a Máscara de Camada (Layer Mask)?",
+        alternativas: ["Apagar pixels permanentemente", "Esconder partes da camada sem apagar", "Aumentar a saturação", "Criar um vetor"],
+        correta: 1,
+        explicacao: ["Máscaras usam preto e branco para ocultar ou revelar partes da imagem de forma não destrutiva."]
+    },
+    {
+        pergunta: "OFFLINE: Qual formato de arquivo suporta transparência e é leve para web?",
+        alternativas: ["JPG", "PSD", "PNG", "RAW"],
+        correta: 2,
+        explicacao: ["O PNG suporta canal alfa (transparência) e compressão sem perdas, ideal para logotipos e ícones web."]
+    },
+    {
+        pergunta: "OFFLINE: O que faz a ferramenta Clone Stamp (Carimbo)?",
+        alternativas: ["Corta a imagem", "Clona uma área da imagem para outra", "Desfoca o fundo", "Ajusta o brilho"],
+        correta: 1,
+        explicacao: ["Com o Alt pressionado, você define a origem e depois pinta para replicar aquela textura em outro lugar."]
+    },
+    {
+        pergunta: "OFFLINE: Qual a vantagem de converter para Smart Object antes de redimensionar?",
+        alternativas: ["O arquivo fica menor", "Não perde qualidade ao diminuir e aumentar depois", "As cores ficam mais vivas", "Remove o fundo automaticamente"],
+        correta: 1,
+        explicacao: ["Smart Objects preservam os dados originais da imagem, permitindo transformações não destrutivas."]
+    }
+];
+
+// ============================================================================
+// LÓGICA DO JOGO
+// ============================================================================
+let score = 0;
+let questionCount = 0;
+let hits = 0;
+let currentQuestion = null;
+let isFetching = false;
+
+const gameArea = document.getElementById('gameArea');
+const startBtn = document.getElementById('startBtn');
+const stopBtn = document.getElementById('stopBtn');
+const startControls = document.getElementById('startControls');
+const gameStats = document.getElementById('gameStats');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const qCountDisplay = document.getElementById('qCount');
+const hitsDisplay = document.getElementById('hits');
+
+startBtn.addEventListener('click', startGame);
+stopBtn.addEventListener('click', stopGame);
+
+function startGame() {
+    // Verificação de Segurança (Agora aceita sua chave)
+    if (GEMINI_API_KEY === "SUA_CHAVE_AQUI" || GEMINI_API_KEY.length < 10) {
+        alert("⚠️ ATENÇÃO: Chave API inválida! O jogo rodará no modo Offline.");
+    }
+
+    score = 0;
+    questionCount = 0;
+    hits = 0;
+    updateUI();
+    startControls.style.display = 'none';
+    gameStats.style.display = 'block';
+    loadNewQuestion();
+}
+
+function stopGame() {
+    gameArea.innerHTML = `
+        <div style="text-align:center">
+            <h2>Fim de Jogo!</h2>
+            <div style="font-size:60px;color:var(--accent);margin:20px 0">${score} pts</div>
+            <p class="small">Perguntas: ${questionCount} | Acertos: ${hits}</p>
+        </div>
+    `;
+    startControls.style.display = 'block';
+    startBtn.textContent = "Jogar Novamente";
+    gameStats.style.display = 'none';
+}
+
+function updateUI() {
+    scoreDisplay.textContent = score;
+    qCountDisplay.textContent = questionCount;
+    hitsDisplay.textContent = hits;
+}
+
+// ============================================================================
+// GERAÇÃO COM IA
+// ============================================================================
+
+async function loadNewQuestion() {
+    isFetching = true;
+    const topic = getRandomTopic();
+    
+    gameArea.innerHTML = `
+        <div class="loader"></div>
+        <div class="loading-text">
+            IA criando desafio sobre: <strong>${topic}</strong>...
+        </div>
+    `;
+
+    try {
+        const data = await callGemini(topic);
+        currentQuestion = parseResponse(data);
+    } catch (error) {
+        console.error("Erro IA:", error);
+        // Fallback para perguntas offline
+        const randomLocal = LOCAL_QUESTIONS[Math.floor(Math.random() * LOCAL_QUESTIONS.length)];
+        currentQuestion = JSON.parse(JSON.stringify(randomLocal)); 
+        
+        gameArea.innerHTML += `<div style="color:orange;text-align:center;font-size:12px;margin-bottom:10px">⚠️ Falha na conexão IA. Usando pergunta offline.</div>`;
+    }
+
+    renderQuestionUI();
+}
+
+function renderQuestionUI() {
+    isFetching = false;
+    questionCount++;
+    updateUI();
+
+    gameArea.innerHTML = `
+        <div style="margin-bottom:20px; display:flex; justify-content:space-between">
+            <span class="badge">Pergunta ${questionCount}</span>
+            <span class="small" style="color:var(--muted)">Tema: ${currentQuestion.pergunta.includes('OFFLINE') ? 'Banco Local' : 'Gerado por IA'}</span>
+        </div>
+        <h2 style="font-size:20px;margin-bottom:24px;line-height:1.5">${currentQuestion.pergunta}</h2>
+        <div class="alternativas">
+            ${currentQuestion.alternativas.map((alt, idx) => `
+                <button onclick="handleAnswer(${idx})" id="btn-${idx}">${alt}</button>
+            `).join('')}
+        </div>
+        <div id="feedbackArea"></div>
+    `;
+}
+
+function handleAnswer(selectedIndex) {
+    if (gameArea.querySelector('button[disabled]')) return; 
+
+    const btns = gameArea.querySelectorAll('.alternativas button');
+    btns.forEach(b => b.disabled = true); 
+
+    const isCorrect = selectedIndex === currentQuestion.correta;
+    const feedback = document.getElementById('feedbackArea');
+    const btnSelected = document.getElementById(`btn-${selectedIndex}`);
+    const btnCorrect = document.getElementById(`btn-${currentQuestion.correta}`);
+
+    if (isCorrect) {
+        score += 10;
+        hits++;
+        btnSelected.style.background = 'rgba(41,195,106,0.2)';
+        btnSelected.style.borderColor = 'var(--success)';
+        btnSelected.innerHTML += ' ✅';
+    } else {
+        btnSelected.style.background = 'rgba(255,107,107,0.2)';
+        btnSelected.style.borderColor = 'var(--danger)';
+        if(btnCorrect) {
+            btnCorrect.style.background = 'rgba(41,195,106,0.2)';
+            btnCorrect.style.borderColor = 'var(--success)';
+        }
+    }
+    updateUI();
+
+    feedback.innerHTML = `
+        <div class="explanation">
+            <strong style="color:${isCorrect ? 'var(--success)' : 'var(--danger)'}">
+                ${isCorrect ? 'Boa!' : 'Não foi dessa vez.'}
+            </strong>
+            <div style="margin-top:10px;font-size:14px;line-height:1.6">
+                ${currentQuestion.explicacao.map(s => `<div>• ${s}</div>`).join('')}
+            </div>
+            <button class="btn primary" style="margin-top:15px" onclick="loadNewQuestion()">Próxima Pergunta ➔</button>
+        </div>
+    `;
+}
+
+// ============================================================================
+// CONEXÃO API
+// ============================================================================
+// Nova função que chama o SEU servidor no Render, em vez do Google direto
+async function callGemini(topic) {
+    // Note que não tem chave API aqui! É seguro.
+    const response = await fetch('/api/gerar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: topic })
+    });
+
+    if (!response.ok) throw new Error('Erro no servidor');
+
+    const json = await response.json();
+    return json.text; // Retorna o texto que o server mandou
+}
+
+function getRandomTopic() { return TOPICS[Math.floor(Math.random() * TOPICS.length)]; }
+
+function parseResponse(text) {
+    let clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    return JSON.parse(clean);
+}
+</script>
+</body>
+</html>
